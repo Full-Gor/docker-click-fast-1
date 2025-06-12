@@ -446,7 +446,8 @@
                 clearInterval(interval);
             }
             
-            startGame();
+            // Ne pas redémarrer automatiquement le jeu après reset
+            console.log("✅ Jeu remis à zéro");
         }
 
         function getTrophy(score) {
@@ -648,10 +649,10 @@
         console.log("- getAllScores() : Voir tous les scores");
         console.log("- displayScores() : Rafraîchir l'affichage");
         
-        // Supprimer automatiquement les scores de test au chargement
-        setTimeout(() => {
-            deleteSpecificUsers();
-        }, 2000);
+        // Supprimer automatiquement les scores de test au chargement (désactivé temporairement)
+        // setTimeout(() => {
+        //     deleteSpecificUsers();
+        // }, 3000);
     </script>
 </body>
 </html>
