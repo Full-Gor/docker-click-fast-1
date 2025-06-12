@@ -15,41 +15,95 @@ const valueMap = {
     "Émeraude": 800
 };
 
-document.getElementById("startBtn").addEventListener("click", () => {
-    username = document.getElementById("username").value;
-    if (!username) {
-        alert("Veuillez entrer un pseudo avant de jouer !");
+// ATTENDRE QUE LE DOM SOIT CHARGÉ
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("🎮 DOM chargé, initialisation de ClickFast...");
+    
+    // Vérifier que tous les éléments existent
+    const startBtn = document.getElementById("startBtn");
+    const clickBtn = document.getElementById("clickBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const usernameInput = document.getElementById("username");
+    const scoreDisplay = document.getElementById("score");
+    const countdownDisplay = document.getElementById("countdown");
+    
+    if (!startBtn || !clickBtn || !resetBtn || !usernameInput || !scoreDisplay || !countdownDisplay) {
+        console.error("❌ Éléments HTML manquants !");
         return;
     }
-    startGame();
-});
+    
+    console.log("✅ Tous les éléments HTML trouvés");
+    
+    // Event Listeners
+    startBtn.addEventListener("click", () => {
+        console.log("🚀 Bouton Start cliqué");
+        username = usernameInput.value.trim();
+        if (!username) {
+            alert("Veuillez entrer un pseudo avant de jouer !");
+            return;
+        }
+        console.log("👤 Pseudo:", username);
+        startGame();
+    });
 
-document.getElementById("clickBtn").addEventListener("click", () => {
-    score++;
-    document.getElementById("score").innerText = score;
-});
+    clickBtn.addEventListener("click", () => {
+        score++;
+        scoreDisplay.innerText = score;
+        console.log("👆 Clic ! Score:", score);
+    });
 
-document.getElementById("resetBtn").addEventListener("click", resetGame);
+    resetBtn.addEventListener("click", resetGame);
+    
+    // Charger les scores initiaux
+    displayScores();
+    
+    console.log("🎯 ClickFast initialisé avec succès !");
+});
 
 function startGame() {
+    console.log("🎮 Démarrage du jeu...");
     score = 0;
     countdown = 10;
-    document.getElementById("score").innerText = score;
-    document.getElementById("countdown").innerText = countdown;
+    
+    const scoreDisplay = document.getElementById("score");
+    const countdownDisplay = document.getElementById("countdown");
+    
+    if (scoreDisplay) scoreDisplay.innerText = score;
+    if (countdownDisplay) countdownDisplay.innerText = countdown;
+    
+    // Arrêter l'ancien intervalle s'il existe
+    if (interval) {
+        clearInterval(interval);
+    }
     
     interval = setInterval(() => {
         countdown--;
-        document.getElementById("countdown").innerText = countdown;
-        if (countdown <= 0) endGame();
+        console.log("⏰ Countdown:", countdown);
+        if (countdownDisplay) countdownDisplay.innerText = countdown;
+        if (countdown <= 0) {
+            console.log("⏱️ Fin du jeu !");
+            endGame();
+        }
     }, 1000);
+    
+    console.log("✅ Jeu démarré, compteur lancé");
 }
 
 function resetGame() {
+    console.log("🔄 Reset du jeu");
     score = 0;
     countdown = 10;
-    document.getElementById("score").innerText = score;
-    document.getElementById("countdown").innerText = countdown;
-    clearInterval(interval);
+    
+    const scoreDisplay = document.getElementById("score");
+    const countdownDisplay = document.getElementById("countdown");
+    
+    if (scoreDisplay) scoreDisplay.innerText = score;
+    if (countdownDisplay) countdownDisplay.innerText = countdown;
+    
+    if (interval) {
+        clearInterval(interval);
+    }
+    
     startGame();
 }
 
@@ -66,6 +120,7 @@ function getTrophy(score) {
 // Fonction pour envoyer le score vers MockAPI
 const postScore = async (userData) => {
     try {
+        console.log("📤 Envoi du score vers l'API...", userData);
         const response = await fetch(API_BASE_URL, {
             method: "POST",
             headers: {
@@ -75,14 +130,14 @@ const postScore = async (userData) => {
         });
         
         if (!response.ok) {
-            throw new Error("Network response was not ok");
+            throw new Error(`Erreur HTTP: ${response.status}`);
         }
         
         const result = await response.json();
-        console.log("Score enregistré avec succès:", result);
+        console.log("✅ Score enregistré avec succès:", result);
         return result;
     } catch (error) {
-        console.error("Erreur lors de l'enregistrement:", error);
+        console.error("❌ Erreur lors de l'enregistrement:", error);
         throw error;
     }
 };
@@ -90,15 +145,16 @@ const postScore = async (userData) => {
 // Fonction pour récupérer tous les scores depuis MockAPI
 const getAllScores = async () => {
     try {
+        console.log("📥 Récupération des scores...");
         const response = await fetch(API_BASE_URL);
         if (!response.ok) {
-            throw new Error("Network response was not ok");
+            throw new Error(`Erreur HTTP: ${response.status}`);
         }
         const data = await response.json();
-        console.log("Scores récupérés avec succès:", data);
+        console.log("✅ Scores récupérés:", data.length, "scores");
         return data;
     } catch (error) {
-        console.error("Erreur lors de la récupération:", error);
+        console.error("❌ Erreur lors de la récupération:", error);
         return [];
     }
 };
@@ -114,17 +170,19 @@ const deleteUserScores = async (username) => {
                 method: "DELETE",
             });
             if (deleteResponse.ok) {
-                console.log(`Ancien score de ${username} supprimé (ID: ${user.id})`);
+                console.log(`🗑️ Ancien score de ${username} supprimé (ID: ${user.id})`);
             }
         }
     } catch (error) {
-        console.error("Erreur lors de la suppression:", error);
+        console.error("❌ Erreur lors de la suppression:", error);
     }
 };
 
 // Fonction principale pour sauvegarder le score
 async function saveScore(username, score) {
     const trophy = getTrophy(score);
+    
+    console.log("💾 Sauvegarde du score:", { username, score, trophy });
     
     // Générer un avatar aléatoire basé sur le username
     const avatarOptions = [
@@ -174,6 +232,11 @@ async function displayScores() {
             .slice(0, 15); // Top 15
 
         const scoreboard = document.getElementById("scoreboard");
+        
+        if (!scoreboard) {
+            console.error("❌ Élément scoreboard introuvable");
+            return;
+        }
         
         if (sortedScores.length === 0) {
             scoreboard.innerHTML = '<p class="no-scores">🎮 Aucun score enregistré. Soyez le premier à jouer !</p>';
@@ -235,13 +298,19 @@ async function displayScores() {
             .join("");
             
     } catch (error) {
-        console.error("Erreur lors de l'affichage des scores:", error);
-        document.getElementById("scoreboard").innerHTML = '<p class="error">❌ Erreur lors du chargement des scores</p>';
+        console.error("❌ Erreur lors de l'affichage des scores:", error);
+        const scoreboard = document.getElementById("scoreboard");
+        if (scoreboard) {
+            scoreboard.innerHTML = '<p class="error">❌ Erreur lors du chargement des scores</p>';
+        }
     }
 }
 
 function endGame() {
-    clearInterval(interval);
+    console.log("🏁 Fin de partie !");
+    if (interval) {
+        clearInterval(interval);
+    }
     saveScore(username, score);
 }
 
@@ -284,13 +353,10 @@ async function clearAllScoresAPI() {
         alert(`✅ ${deletedCount} scores supprimés de l'API`);
         await displayScores();
     } catch (error) {
-        console.error("Erreur lors de la suppression:", error);
+        console.error("❌ Erreur lors de la suppression:", error);
         alert("❌ Erreur lors de la suppression");
     }
 }
-
-// Chargement initial des scores
-displayScores();
 
 // Rafraîchir les scores toutes les 30 secondes
 setInterval(() => {
