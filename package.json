@@ -1,0 +1,25 @@
+{
+  "name": "docker-click-fast-1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+     "test": "npx jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Full-Gor/docker-click-fast-1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Full-Gor/docker-click-fast-1/issues"
+  },
+  "homepage": "https://github.com/Full-Gor/docker-click-fast-1#readme",
+  "devDependencies": {
+    "jest": "^30.0.0",
+    "jsdom": "^26.1.0"
+  }
+}
