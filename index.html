@@ -642,6 +642,16 @@
         // Console pour les développeurs
         console.log("🎮 ClickFast chargé avec succès !");
         console.log("📡 Connecté à MockAPI:", API_BASE_URL);
+        console.log("🛠️ Fonctions disponibles:");
+        console.log("- deleteSpecificUsers() : Supprimer les scores de test (bobo, Adam, etc.)");
+        console.log("- clearAllScoresAPI() : Supprimer TOUS les scores");
+        console.log("- getAllScores() : Voir tous les scores");
+        console.log("- displayScores() : Rafraîchir l'affichage");
+        
+        // Supprimer automatiquement les scores de test au chargement
+        setTimeout(() => {
+            deleteSpecificUsers();
+        }, 2000);
     </script>
 </body>
 </html>
