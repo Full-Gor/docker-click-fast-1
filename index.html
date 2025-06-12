@@ -492,13 +492,21 @@
                 let deleted = 0;
                 
                 for (const score of scores) {
-                    if (testUsers.some(user => score.username.toLowerCase() === user.toLowerCase())) {
+                    // Vérifier que username existe et est une chaîne
+                    if (score.username && typeof score.username === 'string') {
+                        if (testUsers.some(user => score.username.toLowerCase() === user.toLowerCase())) {
+                            await deleteScore(score.id);
+                            deleted++;
+                        }
+                    } else {
+                        // Supprimer les scores sans username valide
+                        console.log(`⚠️ Score sans username valide détecté (ID: ${score.id}), suppression...`);
                         await deleteScore(score.id);
                         deleted++;
                     }
                 }
                 
-                console.log(`✅ ${deleted} scores de test supprimés`);
+                console.log(`✅ ${deleted} scores supprimés`);
                 return deleted;
             } catch (error) {
                 console.error("❌ Erreur lors de la suppression des utilisateurs de test:", error);
@@ -512,20 +520,26 @@
                 const scores = await getAllScores();
                 
                 // Si on approche de la limite de 100
-                if (scores.length >= 95) {
+                if (scores.length >= 90) {
                     console.log("⚠️ Base de données presque pleine, suppression des anciens scores...");
                     
+                    // Filtrer les scores valides avant de trier
+                    const validScores = scores.filter(score => 
+                        score.username && typeof score.username === 'string' && score.createdAt
+                    );
+                    
                     // Trier par date de création (plus ancien en premier)
-                    const sortedByDate = scores.sort((a, b) => 
+                    const sortedByDate = validScores.sort((a, b) => 
                         new Date(a.createdAt) - new Date(b.createdAt)
                     );
                     
-                    // Supprimer les 10 plus anciens scores
-                    for (let i = 0; i < Math.min(10, sortedByDate.length); i++) {
+                    // Supprimer les 20 plus anciens scores pour faire plus de place
+                    const toDelete = Math.min(20, sortedByDate.length);
+                    for (let i = 0; i < toDelete; i++) {
                         await deleteScore(sortedByDate[i].id);
                     }
                     
-                    console.log("✅ Espace libéré dans la base de données");
+                    console.log(`✅ ${toDelete} anciens scores supprimés pour libérer de l'espace`);
                 }
             } catch (error) {
                 console.error("❌ Erreur lors de la libération d'espace:", error);
@@ -619,11 +633,17 @@
             try {
                 const scores = await getAllScores();
                 
-                // Filtrer les utilisateurs de test qui pourraient encore être présents
+                // Filtrer les utilisateurs de test et les scores invalides
                 const testUsers = ["adam", "bob", "bobo", "test"];
-                const filteredScores = scores.filter(score => 
-                    !testUsers.includes(score.username.toLowerCase())
-                );
+                const filteredScores = scores.filter(score => {
+                    // Vérifier que le score a un username valide
+                    if (!score.username || typeof score.username !== 'string') {
+                        console.log(`⚠️ Score invalide sans username:`, score);
+                        return false;
+                    }
+                    // Filtrer les utilisateurs de test
+                    return !testUsers.includes(score.username.toLowerCase());
+                });
                 
                 // Trier par score décroissant puis par date
                 const sortedScores = filteredScores
@@ -741,12 +761,34 @@
                 console.error("❌ Erreur:", error);
             }
         };
+        
+        // Fonction pour nettoyer les scores invalides
+        window.cleanInvalidScores = async function() {
+            try {
+                const scores = await getAllScores();
+                let deleted = 0;
+                
+                for (const score of scores) {
+                    if (!score.username || typeof score.username !== 'string' || score.username.trim() === '') {
+                        console.log(`🗑️ Suppression du score invalide ID ${score.id}`);
+                        await deleteScore(score.id);
+                        deleted++;
+                    }
+                }
+                
+                console.log(`✅ ${deleted} scores invalides supprimés`);
+                displayScores();
+            } catch (error) {
+                console.error("❌ Erreur lors du nettoyage:", error);
+            }
+        };
 
         // Console pour les développeurs
         console.log("🎮 ClickFast chargé avec succès !");
         console.log("📡 Connecté à MockAPI:", API_BASE_URL);
         console.log("🛠️ Fonctions disponibles:");
         console.log("- deleteSpecificUsers() : Supprimer les scores de test (bobo, Adam, etc.)");
+        console.log("- cleanInvalidScores() : Supprimer les scores sans username valide");
         console.log("- clearAllScoresAPI() : Supprimer TOUS les scores");
         console.log("- getAllScores() : Voir tous les scores");
         console.log("- displayScores() : Rafraîchir l'affichage");
