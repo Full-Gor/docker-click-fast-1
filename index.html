@@ -584,33 +584,37 @@
             }
         }
 
-        async function saveScore(username, score) {
-            const trophy = getTrophy(score);
-            console.log("💾 Sauvegarde du score:", { username, score, trophy });
-            
-            const avatarOptions = [
-                "https://api.dicebear.com/7.x/avataaars/svg?seed=" + username,
-                "https://api.dicebear.com/7.x/bottts/svg?seed=" + username,
-                "https://api.dicebear.com/7.x/pixel-art/svg?seed=" + username
-            ];
-            const randomAvatar = avatarOptions[Math.floor(Math.random() * avatarOptions.length)];
-            
-            const scoreData = {
-                createdAt: new Date().toISOString(),
-                username: username,
-                avatar: randomAvatar,
-                score: score,
-                trophy: trophy,
-                website_url: "onyj.github.io/ClickFast",
-            };
-
-            try {
-                await postScore(scoreData);
-                alert(`🎉 Félicitations ${username} !\n🎯 Score: ${score} clics\n🏆 Trophée: ${trophy}\n📊 Score enregistré en ligne !`);
-            } catch (error) {
-                alert(`❌ Erreur lors de la sauvegarde du score.\n💾 Score: ${score}`);
-            }
+       async function saveScore(username, score) {
+    const trophy = getTrophy(score);
+    console.log("💾 Sauvegarde du score:", { username, score, trophy });
+    
+    const avatarOptions = [
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`,
+        `https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`
+    ];
+    const randomAvatar = avatarOptions[Math.floor(Math.random() * avatarOptions.length)];
+    
+    const scoreData = {
+        createdAt: new Date().toISOString(),
+        username,
+        avatar: randomAvatar,
+        score,
+        trophy,
+        website_url: "onyj.github.io/ClickFast"
+    };
+    
+    try {
+        await postScore(scoreData);
+        await displayScores();
+    } catch (error) {
+        console.error("❌ Erreur lors de la sauvegarde du score:", error);
+        const scoreboard = document.getElementById('scoreboard');
+        if (scoreboard) {
+            scoreboard.innerHTML = '<p class="error">❌ Erreur lors de la sauvegarde du score</p>';
         }
+    }
+}
 
         async function displayScores() {
     try {
