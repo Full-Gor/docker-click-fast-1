@@ -23,6 +23,7 @@
     "jsdom": "^26.1.0"
   },
   "dependencies": {
+    "firebase": "^11.9.1",
     "jest-environment-jsdom": "^30.0.0"
   }
 }

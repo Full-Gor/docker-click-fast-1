@@ -1,10 +1,24 @@
-const apiUrl = "https://672e1217229a881691eed80f.mockapi.io/scores";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+
+const firebaseConfig = {
+    apiKey: "TON_API_KEY",
+    authDomain: "TON_PROJET.firebaseapp.com",
+    projectId: "TON_PROJET",
+    storageBucket: "TON_PROJET.appspot.com",
+    messagingSenderId: "TON_ID",
+    appId: "TON_APP_ID"
+};
+
+// Initialisation Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 let score = 0;
 let countdown = 10;
 let interval;
 let username = "";
 
-// Classement des trophées en fonction de la valeur des pierres précieuses
 const valueMap = {
     "Or": 1000,
     "Argent": 500,
@@ -51,60 +65,39 @@ function resetGame() {
     startGame();
 }
 
-function endGame() {
-    clearInterval(interval);
+async function saveScore(username, score) {
     const trophy = getTrophy(score);
-    saveScore(username, score, trophy);
-    alert(`Fin du jeu ! Score : ${score} - Trophée obtenu : ${trophy}`);
-    getData();
-}
-
-function getTrophy(score) {
-    if (score >= valueMap["Or"]) return "Or";
-    if (score >= valueMap["Rubis"]) return "Rubis";
-    if (score >= valueMap["Émeraude"]) return "Émeraude";
-    if (score >= valueMap["Saphir"]) return "Saphir";
-    if (score >= valueMap["Argent"]) return "Argent";
-    return "Bronze";
-}
-
-async function saveScore(username, score, trophy) {
-    const data = {
-        createdAt: new Date().toISOString(),
-        username,
-        score,
-        trophy
-    };
-
     try {
-        const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+        await addDoc(collection(db, "scores"), {
+            username,
+            score,
+            trophy,
+            createdAt: new Date().toISOString()
         });
-
-        if (!response.ok) throw new Error("Erreur lors de l'enregistrement du score");
-
-        console.log("Score enregistré :", await response.json());
+        console.log("Score enregistré !");
     } catch (error) {
-        console.error("Erreur :", error);
+        console.error("Erreur d'enregistrement :", error);
     }
+    getData();
 }
 
 async function getData() {
     try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error("Erreur lors de la récupération des scores");
-
-        const scores = await response.json();
-        document.getElementById("scoreboard").innerHTML = scores
-            .sort((a, b) => b.score - a.score)
-            .map(s => `<p>${s.username} - ${s.score} pts (${s.trophy}) - ${new Date(s.createdAt).toLocaleString()}</p>`)
+        const querySnapshot = await getDocs(collection(db, "scores"));
+        document.getElementById("scoreboard").innerHTML = querySnapshot.docs
+            .map(doc => {
+                const data = doc.data();
+                return `<p>${data.username} - ${data.score} pts (${data.trophy}) - ${new Date(data.createdAt).toLocaleString()}</p>`;
+            })
             .join("");
-
     } catch (error) {
-        console.error("Erreur :", error);
+        console.error("Erreur de récupération :", error);
     }
+}
+
+function endGame() {
+    clearInterval(interval);
+    saveScore(username, score);
 }
 
 getData();
