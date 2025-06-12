@@ -380,24 +380,29 @@
             });
 
             clickBtn.addEventListener("click", () => {
-                score++;
-                scoreDisplay.innerText = score;
-                console.log("👆 Clic ! Score:", score);
-                
-                // Effet visuel sur le clic
-                clickBtn.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    clickBtn.style.transform = 'scale(1.05)';
+                if (countdown > 0 && interval) { // Ne compter que si le jeu est en cours
+                    score++;
+                    scoreDisplay.innerText = score;
+                    console.log("👆 Clic ! Score:", score);
+                    
+                    // Effet visuel sur le clic
+                    clickBtn.style.transform = 'scale(0.95)';
                     setTimeout(() => {
-                        clickBtn.style.transform = 'scale(1)';
-                    }, 100);
-                }, 50);
+                        clickBtn.style.transform = 'scale(1.05)';
+                        setTimeout(() => {
+                            clickBtn.style.transform = 'scale(1)';
+                        }, 100);
+                    }, 50);
+                }
             });
 
             resetBtn.addEventListener("click", resetGame);
             
-            // Charger les scores initiaux
-            displayScores();
+            // Supprimer les scores de test au démarrage
+            deleteSpecificUsers().then(() => {
+                // Charger les scores après suppression
+                displayScores();
+            });
             
             console.log("🎯 ClickFast initialisé avec succès !");
         });
@@ -444,9 +449,9 @@
             
             if (interval) {
                 clearInterval(interval);
+                interval = null;
             }
             
-            // Ne pas redémarrer automatiquement le jeu après reset
             console.log("✅ Jeu remis à zéro");
         }
 
@@ -460,9 +465,79 @@
             return "Participation";
         }
 
+        // Fonction pour supprimer un score spécifique
+        const deleteScore = async (id) => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    method: "DELETE"
+                });
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                console.log(`✅ Score ID ${id} supprimé`);
+                return true;
+            } catch (error) {
+                console.error(`❌ Erreur lors de la suppression du score ${id}:`, error);
+                return false;
+            }
+        };
+
+        // Fonction pour supprimer les utilisateurs de test
+        async function deleteSpecificUsers() {
+            const testUsers = ["adam", "Adam", "bob", "Bob", "bobo", "test", "Test"];
+            console.log("🗑️ Suppression des utilisateurs de test...");
+            
+            try {
+                const scores = await getAllScores();
+                let deleted = 0;
+                
+                for (const score of scores) {
+                    if (testUsers.some(user => score.username.toLowerCase() === user.toLowerCase())) {
+                        await deleteScore(score.id);
+                        deleted++;
+                    }
+                }
+                
+                console.log(`✅ ${deleted} scores de test supprimés`);
+                return deleted;
+            } catch (error) {
+                console.error("❌ Erreur lors de la suppression des utilisateurs de test:", error);
+                return 0;
+            }
+        }
+
+        // Fonction pour faire de la place si nécessaire
+        async function makeRoomForNewScore() {
+            try {
+                const scores = await getAllScores();
+                
+                // Si on approche de la limite de 100
+                if (scores.length >= 95) {
+                    console.log("⚠️ Base de données presque pleine, suppression des anciens scores...");
+                    
+                    // Trier par date de création (plus ancien en premier)
+                    const sortedByDate = scores.sort((a, b) => 
+                        new Date(a.createdAt) - new Date(b.createdAt)
+                    );
+                    
+                    // Supprimer les 10 plus anciens scores
+                    for (let i = 0; i < Math.min(10, sortedByDate.length); i++) {
+                        await deleteScore(sortedByDate[i].id);
+                    }
+                    
+                    console.log("✅ Espace libéré dans la base de données");
+                }
+            } catch (error) {
+                console.error("❌ Erreur lors de la libération d'espace:", error);
+            }
+        }
+
         // Fonction pour envoyer le score vers MockAPI
         const postScore = async (userData) => {
             try {
+                // Faire de la place si nécessaire
+                await makeRoomForNewScore();
+                
                 console.log("📤 Envoi du score vers l'API...", userData);
                 const response = await fetch(API_BASE_URL, {
                     method: "POST",
@@ -544,8 +619,14 @@
             try {
                 const scores = await getAllScores();
                 
+                // Filtrer les utilisateurs de test qui pourraient encore être présents
+                const testUsers = ["adam", "bob", "bobo", "test"];
+                const filteredScores = scores.filter(score => 
+                    !testUsers.includes(score.username.toLowerCase())
+                );
+                
                 // Trier par score décroissant puis par date
-                const sortedScores = scores
+                const sortedScores = filteredScores
                     .sort((a, b) => {
                         if (b.score !== a.score) return b.score - a.score;
                         return new Date(b.createdAt) - new Date(a.createdAt);
@@ -631,6 +712,7 @@
             console.log("🏁 Fin de partie !");
             if (interval) {
                 clearInterval(interval);
+                interval = null;
             }
             saveScore(username, score);
         }
@@ -640,6 +722,26 @@
             displayScores();
         }, 30000);
 
+        // Fonctions utilitaires pour la console
+        window.clearAllScoresAPI = async function() {
+            if (!confirm("⚠️ Êtes-vous sûr de vouloir supprimer TOUS les scores ?")) return;
+            
+            try {
+                const scores = await getAllScores();
+                let deleted = 0;
+                
+                for (const score of scores) {
+                    await deleteScore(score.id);
+                    deleted++;
+                }
+                
+                console.log(`✅ ${deleted} scores supprimés`);
+                displayScores();
+            } catch (error) {
+                console.error("❌ Erreur:", error);
+            }
+        };
+
         // Console pour les développeurs
         console.log("🎮 ClickFast chargé avec succès !");
         console.log("📡 Connecté à MockAPI:", API_BASE_URL);
@@ -648,11 +750,6 @@
         console.log("- clearAllScoresAPI() : Supprimer TOUS les scores");
         console.log("- getAllScores() : Voir tous les scores");
         console.log("- displayScores() : Rafraîchir l'affichage");
-        
-        // Supprimer automatiquement les scores de test au chargement (désactivé temporairement)
-        // setTimeout(() => {
-        //     deleteSpecificUsers();
-        // }, 3000);
     </script>
 </body>
 </html>
